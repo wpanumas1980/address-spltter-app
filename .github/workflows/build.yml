@@ -31,4 +31,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: excelSplitter
-          path: dist/excelSplitter.exe
+          path: dist/*.exe
