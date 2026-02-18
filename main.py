@@ -72,13 +72,13 @@ class ExcelSplitterUI(QMainWindow):
         main_layout = QVBoxLayout(central_widget)
 
         # ส่วนหัวข้อ
-        self.label = QLabel("กรุณาเลือกไฟล์ Excel เพื่อเริ่มต้น")
+        self.label = QLabel("เลือกไฟล์ Excel เพื่อเริ่มต้น")
         self.label.setStyleSheet("font-size: 16px; font-weight: bold; color: #2c3e50;")
         main_layout.addWidget(self.label)
 
         # ส่วนเลือกไฟล์และปุ่มประมวลผล
         button_layout = QHBoxLayout()
-        self.btn_open = QPushButton("📂 เลือกไฟล์ Excel ต้นฉบับ")
+        self.btn_open = QPushButton("📂 เลือกไฟล์ Excel")
         self.btn_open.setFixedHeight(40)
         self.btn_open.clicked.connect(self.open_file)
         button_layout.addWidget(self.btn_open)
