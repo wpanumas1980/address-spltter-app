@@ -1,29 +1,34 @@
-name: Build EXE
+name: Build Windows EXE
 
-on: [push]
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: 📥 Checkout source
+        uses: actions/checkout@v4
 
-      - name: Setup Python
+      - name: 🐍 Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: '3.12'
 
-      - name: Install dependencies
+      - name: 📦 Install dependencies
         run: |
-          pip install pyinstaller
+          python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Build EXE
-        run: pyinstaller --onefile main.py
+      - name: 🔨 Build EXE (Portable GUI)
+        run: |
+          pyinstaller -F -w --clean --collect-all PyQt6 main.py
 
-      - name: Upload artifact
+      - name: 📂 Upload EXE Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: exe
-          path: dist/*.exe
+          name: excelSplitter
+          path: dist/excelSplitter.exe
