@@ -1,0 +1,55 @@
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
+
+# virtualenv
+.venv/
+venv/
+env/
+ENV/
+
+# pip
+pip-log.txt
+pip-delete-this-directory.txt
+
+# pytest / coverage
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# =========================
+# Jupyter Notebook
+# =========================
+.ipynb_checkpoints
+
+# =========================
+# VSCode
+# =========================
+.vscode/
+
+# =========================
+# OS Files
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# PyInstaller
+# =========================
+build/
+dist/
+*.spec
+
+# =========================
+# Logs
+# =========================
+*.log
+
+# =========================
+# Temp Files
+# =========================
+*.xlsx
