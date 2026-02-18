@@ -1,32 +1,29 @@
-name: Build Windows EXE
+name: Build EXE
 
-on:
-  push:
-    branches: [ main ]
+on: [push]
 
 jobs:
   build:
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Setup Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
-    - name: Install dependencies
-      run: |
-        pip install -r requirements.txt
-        pip install pyinstaller
+      - name: Install dependencies
+        run: |
+          pip install pyinstaller
+          pip install -r requirements.txt
 
-    - name: Build EXE
-      run: |
-        pyinstaller --onefile --windowed main.py
+      - name: Build EXE
+        run: pyinstaller --onefile main.py
 
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: exe
-        path: dist/addressSpltter.exe
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: exe
+          path: dist/*.exe
