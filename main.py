@@ -43,9 +43,7 @@ class ProcessorWorker(QThread):
             
             print(f"Total rows: {len(df)}")
 
-            # --- Logic from pa_extract_address.py ---
-            
-            # Patterns
+            # --- Patterns ---
             home_pattern = r"(?:บ้านเลขที่|เลขที่)?\s*(\d+[A-Za-z]?(?:/\d+[A-Za-z]?)*)"
             moo_pattern = r"\b(?:หมู่ที่|หมู่|ม\.)\s*(\d+[A-Za-z]?(?:/\d+)?)(?=\s|$|,|ตำบล|แขวง|อำเภอ|เขต)"
             building_keywords = ["หมู่บ้าน", "โครงการ", "คอนโด", "แมนชั่น", "การเคหะ", "Garden", "Place", "Ville", "Home", "Condo", "Privacy", "Connect", "Town", "Residence", "Regent", "Escent", "The", "Golden"]
@@ -54,6 +52,7 @@ class ProcessorWorker(QThread):
             soi_pattern = r"(?:ซอย|ซ\.)[\s]*([0-9A-Za-zก-๙\/\-]+)"
             street_pattern = r"(?:\(\s*ถนน([^)]+)\))|(?:ถ\.\s*([^\n\r]*?))(?=\s*(?:ซอย|ซ\.|หมู่|ม\.|ตำบล|แขวง|อำเภอ|เขต|จังหวัด|แยก|เลขที่|ห้อง|$))|(?:ถนน\s*([^\n\r]*?))(?=\s*(?:ซอย|ซ\.|หมู่|ม\.|ตำบล|แขวง|อำเภอ|เขต|จังหวัด|แยก|เลขที่|ห้อง|$))"
 
+            # --- Helper Functions ---
             def extract_with_fallback(df, primary_col, fallback_col, pattern, flags=0):
                 primary_result = df[primary_col].str.extract(pattern, flags=flags, expand=False)
                 fallback_result = df[fallback_col].str.extract(pattern, flags=flags, expand=False)
@@ -71,50 +70,60 @@ class ProcessorWorker(QThread):
                     return data.str.extract(pattern, flags=flags).bfill(axis=1).iloc[:, 0].str.strip()
                 return get_s(p_data).fillna(get_s(f_data))
 
-            # Extraction Process
+            # --- Extraction: REGISTER ---
             print("\n" + "="*60)
             print("REGISTER ADDRESS - Extracting fields...")
             print("="*60)
-            df["Register_HomeNo"] = extract_with_fallback(df, "Register Addr.1 (Local)", "Register Addr.2 (Local)", home_pattern)
-            df["Register_Moo"] = extract_with_fallback(df, "Register Addr.2 (Local)", "Register Addr.1 (Local)", moo_pattern)
+            df["Register_HomeNo"] = extract_with_fallback(df, "Register Addr.1 (Local)", "Register Addr.2 (Local)", home_pattern, re.VERBOSE)
+            df["Register_Moo"] = extract_with_fallback(df, "Register Addr.2 (Local)", "Register Addr.1 (Local)", moo_pattern, re.VERBOSE)
             df["Register_Building"] = extract_building_with_fallback(df["Register Addr.2 (Local)"], df["Register Addr.1 (Local)"], keyword_pattern)
             df["Register_Floor"] = extract_with_fallback(df, "Register Addr.2 (Local)", "Register Addr.1 (Local)", floor_pattern)
             df["Register_Soi"] = extract_with_fallback(df, "Register Addr.2 (Local)", "Register Addr.1 (Local)", soi_pattern)
-            df["Register_Street"] = extract_street_with_fallback(df["Register Addr.2 (Local)"], df["Register Addr.1 (Local)"], street_pattern)
+            df["Register_Street"] = extract_street_with_fallback(df["Register Addr.2 (Local)"], df["Register Addr.1 (Local)"], street_pattern, re.VERBOSE)
             print("Register columns created: HomeNo, Moo, Building, Floor, Soi, Street ✓")
 
+            # --- Extraction: PERMANENT ---
             print("\n" + "="*60)
             print("PERMANENT ADDRESS - Extracting fields...")
             print("="*60)
-            df["Permanent_HomeNo"] = extract_with_fallback(df, "Permanent Addr.1 (Local)", "Permanent Addr.2 (Local)", home_pattern)
-            df["Permanent_Moo"] = extract_with_fallback(df, "Permanent Addr.2 (Local)", "Permanent Addr.1 (Local)", moo_pattern)
+            df["Permanent_HomeNo"] = extract_with_fallback(df, "Permanent Addr.1 (Local)", "Permanent Addr.2 (Local)", home_pattern, re.VERBOSE)
+            df["Permanent_Moo"] = extract_with_fallback(df, "Permanent Addr.2 (Local)", "Permanent Addr.1 (Local)", moo_pattern, re.VERBOSE)
             df["Permanent_Building"] = extract_building_with_fallback(df["Permanent Addr.2 (Local)"], df["Permanent Addr.1 (Local)"], keyword_pattern)
             df["Permanent_Floor"] = extract_with_fallback(df, "Permanent Addr.2 (Local)", "Permanent Addr.1 (Local)", floor_pattern)
             df["Permanent_Soi"] = extract_with_fallback(df, "Permanent Addr.2 (Local)", "Permanent Addr.1 (Local)", soi_pattern)
-            df["Permanent_Street"] = extract_street_with_fallback(df["Permanent Addr.2 (Local)"], df["Permanent Addr.1 (Local)"], street_pattern)
+            df["Permanent_Street"] = extract_street_with_fallback(df["Permanent Addr.2 (Local)"], df["Permanent Addr.1 (Local)"], street_pattern, re.VERBOSE)
             print("Permanent columns created: HomeNo, Moo, Building, Floor, Soi, Street ✓")
 
-            # Quality Check Logic (Simplified for UI view as requested)
+            # --- QUALITY CHECK & SUMMARY ---
             results = []
-            def run_qc(col, p_col, f_col, trig, label):
+            def run_qc(col, label):
                 total = len(df)
                 filled = df[col].notna().sum()
-                missing = total - filled
-                fn = len(df[(df[p_col].str.contains(trig, na=False) | df[f_col].str.contains(trig, na=False)) & df[col].isna()])
-                results.append({"Column": label, "Total": total, "Filled": filled, "Missing": missing, "Issue": fn})
+                results.append({"Column": label, "Total": total, "Filled": filled})
 
-            # Sample checks for summary
-            run_qc("Register_HomeNo", "Register Addr.1 (Local)", "Register Addr.2 (Local)", r"^\s*\d", "Reg HomeNo")
-            run_qc("Register_Moo", "Register Addr.2 (Local)", "Register Addr.1 (Local)", r"ม\.", "Reg Moo")
-            run_qc("Register_Building", "Register Addr.2 (Local)", "Register Addr.1 (Local)", keyword_pattern, "Reg Building")
-            run_qc("Permanent_HomeNo", "Permanent Addr.1 (Local)", "Permanent Addr.2 (Local)", r"^\s*\d", "Perm HomeNo")
-            run_qc("Permanent_Moo", "Permanent Addr.2 (Local)", "Permanent Addr.1 (Local)", r"ม\.", "Perm Moo")
+            # Register Fields QC
+            run_qc("Register_HomeNo", "Reg HomeNo")
+            run_qc("Register_Moo", "Reg Moo")
+            run_qc("Register_Building", "Reg Building")
+            run_qc("Register_Floor", "Reg Floor")
+            run_qc("Register_Soi", "Reg Soi")
+            run_qc("Register_Street", "Reg Street")
+
+            # Permanent Fields QC
+            run_qc("Permanent_HomeNo", "Perm HomeNo")
+            run_qc("Permanent_Moo", "Perm Moo")
+            run_qc("Permanent_Building", "Perm Building")
+            run_qc("Permanent_Floor", "Perm Floor")
+            run_qc("Permanent_Soi", "Perm Soi")
+            run_qc("Permanent_Street", "Perm Street")
 
             print("\n" + "="*60)
             print("📊 OVERALL QUALITY SUMMARY")
             print("="*60)
             summary_df = pd.DataFrame(results)
-            print(summary_df.to_string(index=False))
+            # Show only Column, Total, Filled as requested
+            print(summary_df[["Column", "Total", "Filled"]].to_string(index=False))
+            print("="*60)
 
             self.finished.emit(df)
         except Exception as e:
@@ -127,12 +136,12 @@ class App(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Thai Address Extractor - Portable Tool")
-        self.resize(900, 700)
+        self.resize(900, 750)
         self.input_path = ""
         self.processed_df = None
         self.init_ui()
         
-        # Redirect stdout
+        # Redirect stdout to update_console
         sys.stdout = OutputStream()
         sys.stdout.text_written.connect(self.update_console)
 
@@ -146,7 +155,7 @@ class App(QMainWindow):
         # Style Settings
         self.setStyleSheet("""
             QMainWindow { background-color: #1e1e1e; }
-            QLabel { color: #e0e0e0; font-size: 14px; }
+            QLabel { color: #e0e0e0; font-size: 14px; font-family: 'Segoe UI', sans-serif; }
             QPushButton { 
                 background-color: #333333; color: white; border: 1px solid #555555; 
                 padding: 10px; border-radius: 5px; font-weight: bold;
@@ -154,6 +163,8 @@ class App(QMainWindow):
             QPushButton:hover { background-color: #444444; border-color: #00FF00; }
             QPushButton#processBtn { background-color: #005f00; border-color: #00FF00; }
             QPushButton#processBtn:disabled { background-color: #222222; color: #666666; }
+            QProgressBar { border: 1px solid #555555; border-radius: 5px; background-color: #222222; }
+            QProgressBar::chunk { background-color: #00FF00; }
         """)
 
         # File Selection Section
@@ -170,7 +181,6 @@ class App(QMainWindow):
         self.console = QTextEdit()
         self.console.setReadOnly(True)
         self.console.setFont(QFont("Consolas", 10))
-        # Matrix Style Colors
         p = self.console.palette()
         p.setColor(QPalette.ColorRole.Base, QColor(0, 0, 0))
         p.setColor(QPalette.ColorRole.Text, QColor(0, 255, 0))
@@ -180,7 +190,6 @@ class App(QMainWindow):
         # Progress Bar
         self.progress = QProgressBar()
         self.progress.setTextVisible(False)
-        self.progress.setStyleSheet("QProgressBar::chunk { background-color: #00FF00; }")
         self.progress.hide()
         layout.addWidget(self.progress)
 
@@ -212,8 +221,9 @@ class App(QMainWindow):
             self.input_path = file_path
             self.lbl_file.setText(os.path.basename(file_path))
             self.btn_run.setEnabled(True)
+            self.btn_save.setEnabled(False)
             self.console.clear()
-            print(f"[SYSTEM]: File loaded -> {file_path}")
+            print(f"[SYSTEM]: File selected -> {file_path}")
 
     def run_process(self):
         if not self.input_path: return
@@ -221,7 +231,7 @@ class App(QMainWindow):
         self.btn_run.setEnabled(False)
         self.btn_save.setEnabled(False)
         self.progress.show()
-        self.progress.setRange(0, 0) # Indeterminate mode
+        self.progress.setRange(0, 0)
         self.console.clear()
         
         self.worker = ProcessorWorker(self.input_path)
@@ -234,7 +244,7 @@ class App(QMainWindow):
         self.progress.hide()
         self.btn_run.setEnabled(True)
         self.btn_save.setEnabled(True)
-        print("\n[SUCCESS]: Address extraction completed!")
+        print("\n[SUCCESS]: Address extraction process finished.")
 
     def on_error(self, message):
         self.progress.hide()
@@ -247,15 +257,15 @@ class App(QMainWindow):
         save_path, _ = QFileDialog.getSaveFileName(self, "Save Exported File", "PA_Address_Extracted.xlsx", "Excel Files (*.xlsx)")
         if save_path:
             try:
-                # Define columns to export (same logic as script)
+                # Include specific columns in output
                 all_cols = self.processed_df.columns.tolist()
-                important_keywords = ["Register_", "Permanent_", "รหัส", "ชื่อ", "นามสกุล", "Addr"]
-                output_cols = [c for c in all_cols if any(k in c for k in important_keywords)]
+                keywords = ["Register_", "Permanent_", "รหัส", "ชื่อ", "นามสกุล", "Addr"]
+                output_cols = [c for c in all_cols if any(k in c for k in keywords)]
                 
                 self.processed_df[output_cols].to_excel(save_path, index=False, engine="openpyxl")
-                print(f"\n[SYSTEM]: File exported successfully to: {save_path}")
+                print(f"\n[SYSTEM]: Data successfully exported to: {save_path}")
             except Exception as e:
-                print(f"\n[ERROR]: Could not save file. {str(e)}")
+                print(f"\n[ERROR]: Export failed. {str(e)}")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
