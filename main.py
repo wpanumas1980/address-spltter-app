@@ -182,7 +182,7 @@ class ProcessorWorker(QThread):
 class App(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Thai Address Extractor & Template Converter")
+        self.setWindowTitle("PA Address Extractor & Template Converter")
         self.resize(1000, 800)
         self.input_path = ""
         self.processed_df = None
@@ -250,7 +250,7 @@ class App(QMainWindow):
         layout.addWidget(self.progress)
 
         # 4. Console (Bottom)
-        layout.addWidget(QLabel("Matrix Process Console:"))
+        layout.addWidget(QLabel("Main Process Console:"))
         self.console = QTextEdit()
         self.console.setReadOnly(True)
         self.console.setFont(QFont("Consolas", 10))
